@@ -21,7 +21,7 @@ def dummy_training_function():
     return train
 
 
-def GAN_training_function(G, D, GD, z_, y_, ema, state_dict, config, ema_losses=None, augment_pipe=None):
+def GAN_training_function(G, D, GD, z_, y_, ema, state_dict, config, ema_losses=None):
     def train(x, y):
         G.optim.zero_grad()
         D.optim.zero_grad()
@@ -49,7 +49,7 @@ def GAN_training_function(G, D, GD, z_, y_, ema, state_dict, config, ema_losses=
                 x_counter = x[counter]*1
                 x_counter.requires_grad = True
                 D_scores = GD(z_[:config['batch_size']], y_[:config['batch_size']],
-                              x_counter, y[counter], train_G=False, policy=config['DiffAugment'], augment_pipe=augment_pipe)
+                              x_counter, y[counter], train_G=False, policy=config['DiffAugment'])
                 D_fake, D_real = D_scores
 
                 # D loss
@@ -97,7 +97,7 @@ def GAN_training_function(G, D, GD, z_, y_, ema, state_dict, config, ema_losses=
             for accumulation_index in range(config['num_G_accumulations']):
                 z_.sample_()
                 y_.sample_()
-                D_fake = GD(z_, y_, train_G=True, policy=config['DiffAugment'], augment_pipe=augment_pipe)
+                D_fake = GD(z_, y_, train_G=True, policy=config['DiffAugment'])
                 G_loss = losses.generator_loss(
                     D_fake, D_real_total) / float(config['num_G_accumulations'])
                 G_loss.backward()

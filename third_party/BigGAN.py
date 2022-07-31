@@ -433,12 +433,13 @@ class Discriminator(nn.Module):
 
 
 class G_D(nn.Module):
-    def __init__(self, G, D):
+    def __init__(self, G, D, augment_pipe):
         super(G_D, self).__init__()
         self.G = G
         self.D = D
+        self.augment_pipe = augment_pipe
 
-    def forward(self, z, gy, x=None, dy=None, train_G=False, return_G_z=False, policy=False, augment_pipe=None):
+    def forward(self, z, gy, x=None, dy=None, train_G=False, return_G_z=False, policy=False):
         if z is not None:
             # If training G, enable grad tape
             with torch.set_grad_enabled(train_G):
@@ -456,9 +457,8 @@ class G_D(nn.Module):
         D_class = torch.cat(
             [label for label in [gy, dy] if label is not None], 0)
         # D_input = DiffAugment(D_input, policy=policy)
-        import pdb 
-        pdb.set_trace()
-        D_input = augment_pipe(D_input)
+
+        D_input = self.augment_pipe(D_input)
         # Get Discriminator output
         D_out = self.D(D_input, D_class)
 
