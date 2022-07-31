@@ -90,14 +90,6 @@ def run(config, ema_losses):
         print('Casting D to fp16...')
         D = D.half()
         # Consider automatically reducing SN_eps?
-    GD = model.G_D(G, D)
-    print(G)
-    print(D)
-    print('Number of params in G: {} D: {}'.format(
-        *[sum([p.data.nelement() for p in net.parameters()]) for net in [G, D]]))
-    # Prepare state dict, which holds things like epoch # and itr #
-    state_dict = {'itr': 0, 'epoch': 0, 'save_num': 0, 'save_best_num': 0,
-                  'best_IS': 0, 'best_FID': 999999, 'config': config}
 
     #  augment_pipe
     augpipe_specs = {
@@ -117,6 +109,17 @@ def run(config, ema_losses):
     augment_pipe = AugmentPipe().train().requires_grad_(False).to(device)
     augment_pipe.p.copy_(torch.as_tensor(0.6))
 
+    GD = model.G_D(G, D, augment_pipe)
+    print(G)
+    print(D)
+    print('Number of params in G: {} D: {}'.format(
+        *[sum([p.data.nelement() for p in net.parameters()]) for net in [G, D]]))
+    # Prepare state dict, which holds things like epoch # and itr #
+    state_dict = {'itr': 0, 'epoch': 0, 'save_num': 0, 'save_best_num': 0,
+                  'best_IS': 0, 'best_FID': 999999, 'config': config}
+
+    
+
     # If loading from a pre-trained model, load weights
     if config['resume']:
         print('Loading weights...')
@@ -131,6 +134,7 @@ def run(config, ema_losses):
     # If parallel, parallelize the GD module
     if config['parallel']:
         GD = nn.DataParallel(GD)
+        augment_pipe = nn.DataParallel(augment_pipe)
 
     # Prepare loggers for stats; metrics holds test metrics,
     # lmetrics holds any desired training metrics.
@@ -174,7 +178,7 @@ def run(config, ema_losses):
     # Loaders are loaded, prepare the training function
     if config['which_train_fn'] == 'GAN':
         train = train_fns.GAN_training_function(G, D, GD, z_, y_, ema,
-                                                state_dict, config, ema_losses, augment_pipe)
+                                                state_dict, config, ema_losses)
     # Else, assume debugging and use the dummy train fn
     else:
         train = train_fns.dummy_training_function()
